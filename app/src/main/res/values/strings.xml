@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">SmartLock</string>
+
+    <string name="hint_string">Paste here access code</string>
+    <string name="save_string">Save access code</string>
+    <string name="open_door">Open door</string>
+</resources>
