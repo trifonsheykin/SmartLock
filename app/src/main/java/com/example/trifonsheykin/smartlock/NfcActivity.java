@@ -34,7 +34,6 @@ public class NfcActivity extends AppCompatActivity {
         if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action) && intent.hasExtra(NfcAdapter.EXTRA_TAG)){
             NdefMessage ndefMessage = getNdefMessageFromIntent(intent);
             doorId = getStringFromNdefRecord(getNdefRecordFromNdefMessage(ndefMessage));
-            //Toast.makeText(this, doorId, Toast.LENGTH_SHORT).show();
         }else{
             Toast.makeText(this, "NFC intent error", Toast.LENGTH_SHORT).show();
         }

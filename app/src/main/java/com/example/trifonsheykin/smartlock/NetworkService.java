@@ -43,6 +43,8 @@ public class NetworkService extends IntentService {
     private InputStream nis; //Network Input Stream
     private OutputStream nos; //Network Output Stream
 
+    public static final String DOOR_STAT = "com.smartlock.client.DOOR_OPENED";
+
     byte XORcheck = 0;
     byte XORin = 0;
 
@@ -171,9 +173,13 @@ public class NetworkService extends IntentService {
                 }
 
 
+
             }
         } catch (IOException e) {
             e.printStackTrace();
+            Intent broadcastIntent = new Intent(DOOR_STAT);
+            broadcastIntent.putExtra("status", e.getMessage());
+            sendBroadcast(broadcastIntent);
         }
 
 

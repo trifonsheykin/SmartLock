@@ -48,4 +48,14 @@
         app:layout_constraintStart_toEndOf="@+id/b_open_door"
         app:layout_constraintTop_toBottomOf="@+id/et_access_code" />
 
+    <Button
+        android:id="@+id/b_connect_wifi"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="112dp"
+        android:layout_marginTop="62dp"
+        android:text="Button"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/b_open_door" />
+
 </android.support.constraint.ConstraintLayout>
