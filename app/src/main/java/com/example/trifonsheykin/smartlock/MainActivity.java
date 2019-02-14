@@ -1,16 +1,22 @@
 package com.example.trifonsheykin.smartlock;
 
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.wifi.WifiConfiguration;
+import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.nfc.NfcAdapter;
 import android.os.AsyncTask;
+import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Base64;
@@ -39,11 +45,15 @@ public class MainActivity extends AppCompatActivity{
     private EditText etAccessCode;
     private String accessCode;
     private SQLiteDatabase mDb;
+    private SharedPreferences sharedPreferences;
+    private SharedPreferences.Editor spEditor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        spEditor = sharedPreferences.edit();
 
 
         bEnterAccessCode = findViewById(R.id.b_enter_access_code);
@@ -81,64 +91,21 @@ public class MainActivity extends AppCompatActivity{
         });
 
 
-        Toast.makeText(this,"hello", Toast.LENGTH_SHORT).show();
         bConnect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String ssid = "DemoServices";
-                String key = "1q2w3e4r";
 
-                WifiConfiguration wifiConfig = new WifiConfiguration();
-                wifiConfig.SSID = String.format("\"%s\"", ssid);
-                wifiConfig.status = WifiConfiguration.Status.DISABLED;
-                wifiConfig.priority = 40;
 
-                boolean wifiIsOpen = false;
-                if (wifiIsOpen) {
-                    // No security
-                    wifiConfig.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.NONE);
-                    wifiConfig.allowedProtocols.set(WifiConfiguration.Protocol.RSN);
-                    wifiConfig.allowedProtocols.set(WifiConfiguration.Protocol.WPA);
-                    wifiConfig.allowedAuthAlgorithms.clear();
-                    wifiConfig.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.CCMP);
-                    wifiConfig.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.TKIP);
-                    wifiConfig.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.WEP40);
-                    wifiConfig.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.WEP104);
-                    wifiConfig.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.CCMP);
-                    wifiConfig.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.TKIP);
-                } else {
-                    //WPA/WPA2 Security
-                    wifiConfig.allowedProtocols.set(WifiConfiguration.Protocol.RSN);
-                    wifiConfig.allowedProtocols.set(WifiConfiguration.Protocol.WPA);
-                    wifiConfig.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.WPA_PSK);
-                    wifiConfig.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.CCMP);
-                    wifiConfig.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.TKIP);
-                    wifiConfig.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.WEP40);
-                    wifiConfig.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.WEP104);
-                    wifiConfig.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.CCMP);
-                    wifiConfig.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.TKIP);
-                    wifiConfig.preSharedKey = "\"".concat(key).concat("\"");
-                }
-                WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
-                if(wifiManager.isWifiEnabled()){
-                    Toast.makeText(getApplicationContext(),"wifi enabled", Toast.LENGTH_SHORT).show();
-                }else{
-                    wifiManager.setWifiEnabled(true);
-                    Toast.makeText(getApplicationContext(),"wifi disabled", Toast.LENGTH_SHORT).show();
-                }
+                Intent intent = new Intent(MainActivity.this, NetworkService.class);
+                intent.putExtra("doorId", "MTIzNA==\n");
+                startService(intent);
 
-                int netId = wifiManager.addNetwork(wifiConfig);
-                if(netId == -1)Toast.makeText(getApplicationContext(),"no such network", Toast.LENGTH_SHORT).show();
-                else{
-                    wifiManager.disconnect();
-                    wifiManager.enableNetwork(netId, true);
-                    wifiManager.reconnect();
-                }
 
             }
         });
 
     }
+
 
 
 

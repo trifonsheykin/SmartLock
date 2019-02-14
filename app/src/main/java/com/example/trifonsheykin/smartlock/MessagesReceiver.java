@@ -11,7 +11,7 @@ public class MessagesReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
 
         Toast.makeText(context, "Error: " + intent.getStringExtra("status"),
-                Toast.LENGTH_LONG).show();
+                Toast.LENGTH_SHORT).show();
 
 
     }

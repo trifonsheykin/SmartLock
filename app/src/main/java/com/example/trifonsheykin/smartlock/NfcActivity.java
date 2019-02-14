@@ -1,16 +1,26 @@
 package com.example.trifonsheykin.smartlock;
 
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
+import android.os.Build;
 import android.os.Parcelable;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
+import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.CompoundButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -28,21 +38,31 @@ public class NfcActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_nfc);
         String doorId = null;
-        nfcAdapter = NfcAdapter.getDefaultAdapter(this);
-        Intent intent = getIntent();
-        String action = intent.getAction();
-        if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action) && intent.hasExtra(NfcAdapter.EXTRA_TAG)){
-            NdefMessage ndefMessage = getNdefMessageFromIntent(intent);
-            doorId = getStringFromNdefRecord(getNdefRecordFromNdefMessage(ndefMessage));
-        }else{
-            Toast.makeText(this, "NFC intent error", Toast.LENGTH_SHORT).show();
+        Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            v.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE));
+        } else {
+            v.vibrate(100);
         }
+        WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+        if(!wifiManager.isWifiEnabled()) {
+            Toast.makeText(this, "Turn ON your Wi-Fi network", Toast.LENGTH_SHORT).show();
+        }else{
+            nfcAdapter = NfcAdapter.getDefaultAdapter(this);
+            Intent intent = getIntent();
+            String action = intent.getAction();
+            if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action) && intent.hasExtra(NfcAdapter.EXTRA_TAG)){
+                NdefMessage ndefMessage = getNdefMessageFromIntent(intent);
+                doorId = getStringFromNdefRecord(getNdefRecordFromNdefMessage(ndefMessage));
+            }else{
+                Toast.makeText(this, "NFC intent error", Toast.LENGTH_SHORT).show();
+            }
 
-        Intent serviceIntent = new Intent(NfcActivity.this, NetworkService.class);
-        serviceIntent.putExtra("doorId", doorId);
-        startService(serviceIntent);
+            Intent serviceIntent = new Intent(NfcActivity.this, NetworkService.class);
+            serviceIntent.putExtra("doorId", doorId);
+            startService(serviceIntent);
+        }
         finish();
-
     }
 
     private NdefMessage getNdefMessageFromIntent(Intent intent){
