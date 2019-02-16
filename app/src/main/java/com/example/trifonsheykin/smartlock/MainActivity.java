@@ -1,118 +1,91 @@
 package com.example.trifonsheykin.smartlock;
 
-import android.app.PendingIntent;
-import android.content.BroadcastReceiver;
-import android.content.ComponentName;
+import android.content.ClipDescription;
+import android.content.ClipboardManager;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.net.wifi.WifiConfiguration;
-import android.net.wifi.WifiInfo;
-import android.net.wifi.WifiManager;
-import android.nfc.NfcAdapter;
-import android.os.AsyncTask;
-import android.preference.PreferenceManager;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
+import android.support.annotation.Nullable;
+import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
 import android.util.Base64;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.Socket;
-import java.security.SecureRandom;
 
-import javax.crypto.Cipher;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
+public class MainActivity extends AppCompatActivity {
 
-public class MainActivity extends AppCompatActivity{
-
-    private Button bEnterAccessCode;
-    private Button bOpenDoor;
-    private Button bConnect;
-    private TextView tvStatus;
-    private EditText etAccessCode;
     private String accessCode;
     private SQLiteDatabase mDb;
     private SharedPreferences sharedPreferences;
     private SharedPreferences.Editor spEditor;
-
+    private boolean qrScanner;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
-        spEditor = sharedPreferences.edit();
-
-
-        bEnterAccessCode = findViewById(R.id.b_enter_access_code);
-        bOpenDoor = findViewById(R.id.b_open_door);
-        bConnect = findViewById(R.id.b_connect_wifi);
-        etAccessCode = findViewById(R.id.et_access_code);
-        tvStatus = findViewById(R.id.tv_status);
 
         DbHelper dbHelperLock = DbHelper.getInstance(this);
         mDb = dbHelperLock.getWritableDatabase();
 
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
 
-        bEnterAccessCode.setOnClickListener(new View.OnClickListener() {
+        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        qrScanner = sharedPreferences.getBoolean("qrScannerEnable", false);
+        if(qrScanner){
+            Intent intent = new Intent(MainActivity.this, QrReadActivity.class);
+            startActivityForResult(intent, 0);
+        }
+
+
+
+
+
+
+
+        FloatingActionButton fab = findViewById(R.id.fab);
+        fab.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v) {
-               //create new entry to database
-                accessCode = etAccessCode.getText().toString();
-                if(accessCode.isEmpty()){
-                    tvStatus.setText("ERROR: No access code found");
-                }else{
-                    createNewAccessCodeInDb(accessCode);
-                }
+            public void onClick(View view) {
+                Intent intent = new Intent(MainActivity.this, AccessCodeActivity.class);
+                startActivityForResult(intent, 1);
             }
         });
 
 
-        bOpenDoor.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(MainActivity.this, NetworkService.class);
-                intent.putExtra("doorId", "MTIzNA==\n");
-                startService(intent);
-
-            }
-        });
 
 
-        bConnect.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-
-                Intent intent = new Intent(MainActivity.this, NetworkService.class);
-                intent.putExtra("doorId", "MTIzNA==\n");
-                startService(intent);
-
-
-            }
-        });
 
     }
 
+
+    public String readFromClipboard() {
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        if (clipboard.hasPrimaryClip()) {
+            android.content.ClipDescription description = clipboard.getPrimaryClipDescription();
+            android.content.ClipData data = clipboard.getPrimaryClip();
+            if (data != null && description != null
+                    && (description.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)
+                    || description.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML)))
+                return String.valueOf(data.getItemAt(0).getText());
+        }
+        return null;
+    }
 
 
 
     private void createNewAccessCodeInDb(String accessCode){
         byte[] accessBytes = Base64.decode(accessCode, Base64.DEFAULT);
         if(accessBytes.length != 57) {
-            tvStatus.setText("ERROR: access code length != 57");
             return;
         }
         byte[] secretWord = new byte[32];
@@ -159,5 +132,37 @@ public class MainActivity extends AppCompatActivity{
         return output;
     }
 
-}
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if(resultCode == RESULT_OK && requestCode == 0){
+            Toast.makeText(getApplicationContext(),data.getStringExtra("result"),Toast.LENGTH_SHORT).show();
 
+
+        }
+
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu, menu);
+        return true;
+    }
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        super.onOptionsItemSelected(item);
+        if (item.getItemId() == R.id.nav_qr_scan) {
+            Intent intent = new Intent(MainActivity.this, QrReadActivity.class);
+            startActivityForResult(intent, 0);
+            return true;
+        }else if (item.getItemId() == R.id.nav_settings){
+            Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
+            startActivity(intent);
+            return true;
+
+        }
+        return false;
+    }
+
+}

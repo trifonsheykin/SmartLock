@@ -4,4 +4,17 @@
     <string name="hint_string">Paste here access code</string>
     <string name="save_string">Save access code</string>
     <string name="open_door">Open door</string>
+    <string name="title_activity_main">Smart locks</string>
+
+    <string name="main_qr_code">QR scanner</string>
+    <string name="main_settings">Settings</string>
+    <string name="main_key_info">Key information</string>
+    <string name="main_access_code">New key</string>
+    <string name="qr_reader_label">QR scanner</string>
+    <string name="title_activity_settings">Settings</string>
+    <string name="title_enable_qr">Enable QR-code scanner on application start up</string>
+    <string name="title_paste">Paste from clipboard</string>
+    <string name="title_clear">Clear</string>
+    <string name="title_save">Save key</string>
+    <string name="title_discription">Copy your access code from text message or scan QR-code </string>
 </resources>

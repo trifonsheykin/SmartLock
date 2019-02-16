@@ -40,13 +40,13 @@ public class NfcActivity extends AppCompatActivity {
         String doorId = null;
         Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            v.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE));
+            v.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE));
         } else {
             v.vibrate(100);
         }
         WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
         if(!wifiManager.isWifiEnabled()) {
-            Toast.makeText(this, "Turn ON your Wi-Fi network", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Turn ON your Wi-Fi adapter", Toast.LENGTH_SHORT).show();
         }else{
             nfcAdapter = NfcAdapter.getDefaultAdapter(this);
             Intent intent = getIntent();

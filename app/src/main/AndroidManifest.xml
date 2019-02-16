@@ -9,7 +9,6 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
 
-
     <uses-feature
         android:name="android.hardware.nfc"
         android:required="true" />
@@ -21,18 +20,31 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".MainActivity">
+        <activity
+            android:name=".MainActivity"
+            android:label="@string/title_activity_main"
+            android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
         <activity android:name=".NfcActivity">
             <intent-filter>
                 <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+
                 <category android:name="android.intent.category.DEFAULT" />
+
                 <data android:mimeType="text/plain" />
             </intent-filter>
+        </activity>
+        <activity
+            android:name=".QrReadActivity"
+            android:label="@string/main_qr_code">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.trifonsheykin.smartlock.MainActivity" />
         </activity>
 
         <service
@@ -47,6 +59,28 @@
                 <action android:name="com.smartlock.client.DOOR_OPENED" />
             </intent-filter>
         </receiver>
+
+        <activity
+            android:name=".SettingsActivity"
+            android:label="@string/main_settings">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.trifonsheykin.smartlock.MainActivity" />
+        </activity>
+        <activity
+            android:name=".AccessCodeActivity"
+            android:label="@string/main_access_code">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.trifonsheykin.smartlock.MainActivity" />
+        </activity>
+        <activity
+            android:name=".KeyInfoActivity"
+            android:label="@string/main_key_info">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="com.example.trifonsheykin.smartlock.MainActivity" />
+        </activity>
     </application>
 
 </manifest>
