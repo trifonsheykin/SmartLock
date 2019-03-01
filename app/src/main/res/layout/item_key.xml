@@ -14,44 +14,50 @@
 
         <ImageView
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="24dp"
             android:layout_gravity="bottom"
-            android:paddingLeft="16dp"
+            android:paddingLeft="21dp"
+            android:scaleType="centerCrop"
             android:src="@drawable/ic_fiber_manual_record_black_24dp"
             android:visibility="visible"
             tools:srcCompat="@drawable/ic_fiber_manual_record_black_24dp" />
 
         <TextView
-            android:id="@+id/tvKeyTitle"
+            android:id="@+id/tv_access_time"
             android:layout_width="match_parent"
-            android:layout_height="63dp"
-            android:layout_marginLeft="24dp"
+            android:layout_height="72dp"
+            android:layout_marginLeft="19dp"
             android:layout_weight="1"
-            android:gravity="center_vertical"
-            android:paddingTop="21dp"
-            android:text="Door title"
+            android:gravity="bottom|left"
+            android:paddingBottom="5dp"
+            android:text="Access time from to"
             android:textSize="20dp" />
+
 
     </LinearLayout>
 
     <TextView
-        android:id="@+id/tvKeyUser"
+        android:id="@+id/tv_key_title_stat"
         android:layout_width="wrap_content"
-        android:layout_height="21dp"
+        android:layout_height="24dp"
         android:layout_gravity="left"
         android:layout_marginStart="64dp"
         android:layout_marginRight="64dp"
         android:gravity="left"
         android:paddingLeft="10dp"
         android:paddingRight="10dp"
-        android:text="Access time"
-        android:textSize="12dp" />
+        android:text="Key 1: not activated"
+        android:textSize="14dp" />
 
     <TextView
-        android:id="@+id/textView"
+        android:id="@+id/tv_ssid"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Key status" />
+        android:layout_height="24dp"
+        android:gravity="top|right"
+        android:paddingRight="24dp"
+        android:text="SSID: not defined"
+        android:textSize="12sp" />
+
 
     <View
         android:id="@+id/view"

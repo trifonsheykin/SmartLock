@@ -2,17 +2,13 @@ package com.example.trifonsheykin.smartlock;
 
 import android.app.IntentService;
 import android.content.ContentValues;
-import android.content.Intent;
 import android.content.Context;
+import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.os.AsyncTask;
-import android.os.Build;
-import android.os.Bundle;
-import android.os.VibrationEffect;
-import android.os.Vibrator;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.util.Base64;
-import android.widget.Toast;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,6 +33,7 @@ public class NetworkService extends IntentService {
     private static final int NEW_USER_REG = 11;
     private static final int DOOR_OPEN_MSG = 5;
     private String ipAddress;
+    private String doorIdBro;
     private Socket nsocket; //Network Socket
     private final int port = 48910;
 
@@ -47,44 +44,37 @@ public class NetworkService extends IntentService {
 
     byte XORcheck = 0;
     byte XORin = 0;
-
+    int active;
     byte[] secretWord = new byte[32];
     byte[] userAes = new byte[32];
     byte[] ipAddr = new byte[4];
     byte[] userId = new byte[4];
     byte userTag;
 
-    String[] projectionKeyData = {
+    String[] projection = {
             LockDataContract._ID,
             LockDataContract.COLUMN_KEY_TITLE,
             LockDataContract.COLUMN_AES_KEY,
             LockDataContract.COLUMN_IP_ADDRESS,
-            LockDataContract.COLUMN_DOOR_ID_STR,
-            LockDataContract.COLUMN_DOOR_ID_BYTE,
+            LockDataContract.COLUMN_DOOR_ID,
+            LockDataContract.COLUMN_DOOR_ID_BRO,
             LockDataContract.COLUMN_USER_ID,
             LockDataContract.COLUMN_USER_TAG,
             LockDataContract.COLUMN_USER_START_DOOR_TIME,
             LockDataContract.COLUMN_USER_STOP_DOOR_TIME,
-            LockDataContract.COLUMN_AP_SSID
-    };
-
-    String[] projectionAccessCode = {
-            LockDataContract._ID,
-            LockDataContract.COLUMN_AC_AES_KEY,
+            LockDataContract.COLUMN_AP_SSID,
+            LockDataContract.COLUMN_AC_ACTIVATED,
             LockDataContract.COLUMN_AC_SECRET_WORD,
-            LockDataContract.COLUMN_AC_IP_ADDRESS,
-            LockDataContract.COLUMN_AC_DOOR1_ID_STR,
-            LockDataContract.COLUMN_AC_DOOR1_ID_BYTE,
-            LockDataContract.COLUMN_AC_DOOR2_ID_STR,
-            LockDataContract.COLUMN_AC_DOOR2_ID_BYTE,
-            LockDataContract.COLUMN_AC_USER_ID,
-            LockDataContract.COLUMN_AC_USER_TAG
     };
+    private String ssid = "No ssid";
+
+
+
     boolean keyDataFound;
     Cursor cursorKeyData;
-    Cursor cursorAccessCode;
     @Override
     protected void onHandleIntent(Intent intent) {
+
         String doorIdString = intent.getStringExtra("doorId");
         doorId = Base64.decode(doorIdString, Base64.DEFAULT);
         DbHelper dbHelperLock = DbHelper.getInstance(this);
@@ -92,17 +82,8 @@ public class NetworkService extends IntentService {
 
         cursorKeyData = mDb.query(
                 LockDataContract.TABLE_NAME_KEY_DATA,
-                projectionKeyData,
-                LockDataContract.COLUMN_DOOR_ID_STR + "= ?",
-                new String[] {doorIdString},
-                null,
-                null,
-                LockDataContract.COLUMN_TIMESTAMP
-        );
-        cursorAccessCode = mDb.query(
-                LockDataContract.TABLE_NAME_ACCESS_CODES,
-                projectionAccessCode,
-                LockDataContract.COLUMN_AC_DOOR1_ID_STR + "= ?",
+                projection,
+                LockDataContract.COLUMN_DOOR_ID + "= ?",
                 new String[] {doorIdString},
                 null,
                 null,
@@ -110,33 +91,29 @@ public class NetworkService extends IntentService {
         );
 
         if(cursorKeyData.getCount() == 0){
-            if(cursorAccessCode.getCount() == 0){
-                return;
-            }else{//working with access code DB
-                keyDataFound = false;
-            }
-        }else{//working with key data DB
-            keyDataFound = true;
+            return;
         }
 
-        if(keyDataFound){
-            cursorKeyData.moveToPosition(0);
-            userAes = cursorKeyData.getBlob(cursorKeyData.getColumnIndex(LockDataContract.COLUMN_AES_KEY));
-            ipAddress = cursorKeyData.getString(cursorKeyData.getColumnIndex(LockDataContract.COLUMN_IP_ADDRESS));
-            userId = cursorKeyData.getBlob(cursorKeyData.getColumnIndex(LockDataContract.COLUMN_USER_ID));
-            userTag = (byte)cursorKeyData.getInt(cursorKeyData.getColumnIndex(LockDataContract.COLUMN_USER_TAG));
+        cursorKeyData.moveToPosition(0);
+        userAes = cursorKeyData.getBlob(cursorKeyData.getColumnIndex(LockDataContract.COLUMN_AES_KEY));
+        ipAddress = cursorKeyData.getString(cursorKeyData.getColumnIndex(LockDataContract.COLUMN_IP_ADDRESS));
+        userId = cursorKeyData.getBlob(cursorKeyData.getColumnIndex(LockDataContract.COLUMN_USER_ID));
+        userTag = (byte)cursorKeyData.getInt(cursorKeyData.getColumnIndex(LockDataContract.COLUMN_USER_TAG));
+        active = cursorKeyData.getInt(cursorKeyData.getColumnIndex(LockDataContract.COLUMN_AC_ACTIVATED));
+        secretWord = cursorKeyData.getBlob(cursorKeyData.getColumnIndex(LockDataContract.COLUMN_AC_SECRET_WORD));
+        doorIdBro = cursorKeyData.getString(cursorKeyData.getColumnIndex(LockDataContract.COLUMN_DOOR_ID_BRO));
 
 
-        }else{
-            cursorAccessCode.moveToPosition(0);
-            secretWord = cursorAccessCode.getBlob(cursorAccessCode.getColumnIndex(LockDataContract.COLUMN_AC_SECRET_WORD));
-            userAes = cursorAccessCode.getBlob(cursorAccessCode.getColumnIndex(LockDataContract.COLUMN_AC_AES_KEY));
-            ipAddress = cursorAccessCode.getString(cursorAccessCode.getColumnIndex(LockDataContract.COLUMN_AC_IP_ADDRESS));
-            userId = cursorAccessCode.getBlob(cursorAccessCode.getColumnIndex(LockDataContract.COLUMN_AC_USER_ID));
-            userTag = (byte)cursorAccessCode.getInt(cursorAccessCode.getColumnIndex(LockDataContract.COLUMN_AC_USER_TAG));
-
-
+        if(!isConecctedToDevice()){
+            Intent broadcastIntent = new Intent(DOOR_STAT);
+            broadcastIntent.putExtra("status", "IP address not found");
+            sendBroadcast(broadcastIntent);
+            return;
         }
+
+        WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+        ssid = wifiInfo.getSSID();
 
         byte[] buffer = new byte[100];
         int read = 0;
@@ -168,11 +145,22 @@ public class NetworkService extends IntentService {
         } catch (IOException e) {
             e.printStackTrace();
             Intent broadcastIntent = new Intent(DOOR_STAT);
-            broadcastIntent.putExtra("status", e.getMessage());
+            broadcastIntent.putExtra("status", "Error: " + e.getMessage());
             sendBroadcast(broadcastIntent);
         }
 
 
+    }
+
+    public boolean isConecctedToDevice() {
+        Runtime runtime = Runtime.getRuntime();
+        try {
+            Process ipProcess = runtime.exec("/system/bin/ping -c 1 " + ipAddress);
+            int     exitValue = ipProcess.waitFor();
+            return (exitValue == 0);
+        } catch (IOException e)          { e.printStackTrace(); }
+        catch (InterruptedException e) { e.printStackTrace(); }
+        return false;
     }
 
     private byte[] makeChallengeRequestFor(byte userTag){
@@ -192,7 +180,7 @@ public class NetworkService extends IntentService {
         System.arraycopy(decryptedData, 0, temp, 0, 16);
         XORin = decryptedData[0];
         if (XORcheck == XORin){
-            if(keyDataFound == false){
+            if(active == 0){
                 byte[] plaintext = new byte[48];
                 plaintext[0] = NEW_USER_REG;//MESSAGE TYPE: NEW_USER_REG 11
                 plaintext[1] = XORcalc(temp);//XOR
@@ -219,25 +207,25 @@ public class NetworkService extends IntentService {
     }
 
     private void saveDataToDb(byte[] newAes, String doorIdStr){
-        if(newAes == null) return;
-
-        if(keyDataFound){//save new aes in key data DB
-            ContentValues cv = new ContentValues();
-            cv.put(LockDataContract.COLUMN_AES_KEY, newAes);
-            mDb.update(LockDataContract.TABLE_NAME_KEY_DATA, cv, LockDataContract.COLUMN_DOOR_ID_STR + "= ?", new String[]{doorIdStr});
-
-        }else{//save new entry in key data and delete entry in access code
-            ContentValues cvDoor1 = new ContentValues();
-            cvDoor1.put(LockDataContract.COLUMN_AES_KEY, newAes);
-            cvDoor1.put(LockDataContract.COLUMN_IP_ADDRESS, ipAddress);
-            cvDoor1.put(LockDataContract.COLUMN_DOOR_ID_STR, doorIdStr);
-            cvDoor1.put(LockDataContract.COLUMN_DOOR_ID_BYTE, doorId);
-            cvDoor1.put(LockDataContract.COLUMN_USER_ID, userId);
-            cvDoor1.put(LockDataContract.COLUMN_USER_TAG, userTag);
-            mDb.insert(LockDataContract.TABLE_NAME_KEY_DATA, null, cvDoor1);
-            mDb.delete(LockDataContract.TABLE_NAME_ACCESS_CODES, LockDataContract.COLUMN_AC_DOOR1_ID_STR + "= ?", new String[]{doorIdStr});
-
+        if(newAes == null){
+            Intent broadcastIntent = new Intent(DOOR_STAT);
+            broadcastIntent.putExtra("status", "No new AES key");
+            sendBroadcast(broadcastIntent);
+            return;
         }
+
+        ContentValues cv = new ContentValues();
+        cv.put(LockDataContract.COLUMN_AES_KEY, newAes);
+        cv.put(LockDataContract.COLUMN_AP_SSID, ssid);
+        if(active == 0) {//NEW KEW REGISTERED
+            cv.put(LockDataContract.COLUMN_AC_ACTIVATED, 1);
+            cv.put(LockDataContract.COLUMN_AC_SECRET_WORD, (byte[]) null);
+        }
+        mDb.update(LockDataContract.TABLE_NAME_KEY_DATA, cv, LockDataContract.COLUMN_DOOR_ID + "= ?", new String[]{doorIdStr});
+        mDb.update(LockDataContract.TABLE_NAME_KEY_DATA, cv, LockDataContract.COLUMN_DOOR_ID + "= ?", new String[]{doorIdBro});
+
+
+
     }
 
     private byte[] replyHandle(byte[] buffer){
@@ -251,6 +239,9 @@ public class NetworkService extends IntentService {
             System.arraycopy(decryptedData, 2, newAes, 0, 32);
             byte[]reply = new byte[14];
             System.arraycopy(decryptedData, 34, reply, 0, reply.length);
+            Intent broadcastIntent = new Intent(DOOR_STAT);
+            broadcastIntent.putExtra("status", new String(reply));
+            sendBroadcast(broadcastIntent);
             return newAes;
 
         }

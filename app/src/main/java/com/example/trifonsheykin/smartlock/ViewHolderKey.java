@@ -5,14 +5,16 @@ import android.view.View;
 import android.widget.TextView;
 
 public class ViewHolderKey extends RecyclerView.ViewHolder {
-    public TextView keyTitle;
-    public TextView keyUser;
+    public TextView keyAccessTime;
+    public TextView keyTitleState;
+    public TextView keySsid;
 
     public ViewHolderKey(View itemView, View.OnClickListener clickListener) {
         super(itemView);
 
-        keyTitle = itemView.findViewById(R.id.tvKeyTitle);
-        keyUser = itemView.findViewById(R.id.tvKeyUser);
+        keyAccessTime = itemView.findViewById(R.id.tv_access_time);
+        keyTitleState = itemView.findViewById(R.id.tv_key_title_stat);
+        keySsid = itemView.findViewById(R.id.tv_ssid);
         itemView.setOnClickListener(clickListener);
 
     }

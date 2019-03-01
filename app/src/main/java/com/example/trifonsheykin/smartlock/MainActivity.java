@@ -1,24 +1,24 @@
 package com.example.trifonsheykin.smartlock;
 
-import android.content.ClipDescription;
-import android.content.ClipboardManager;
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
-import android.util.Base64;
+import android.support.v7.widget.helper.ItemTouchHelper;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Toast;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -28,13 +28,74 @@ public class MainActivity extends AppCompatActivity {
     private SharedPreferences sharedPreferences;
     private SharedPreferences.Editor spEditor;
     private boolean qrScanner;
+    RecyclerView recyclerViewKey;
+    private Cursor cursor;
+    private DataAdapterKey dataAdapterKey;
+    private final int QR_SCAN = 0;
+    private final int NEW_KEY = 1;
+    private final int EDIT_KEY = 2;
+
+    String[] projection = {
+            LockDataContract._ID,
+            LockDataContract.COLUMN_DOOR_ID
+    };
+
+
+    private final View.OnClickListener keyItemClickListener =
+            new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    long id = (long) view.getTag();
+                    Intent intent= new Intent(MainActivity.this, KeyInfoActivity.class);
+                    intent.putExtra("rowId", id);
+                    startActivityForResult(intent, EDIT_KEY);////request code edit lock
+
+                } };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        DbHelper dbHelperLock = DbHelper.getInstance(this);
-        mDb = dbHelperLock.getWritableDatabase();
+        recyclerViewKey = findViewById(R.id.keyRecycler);
+        recyclerViewKey.setLayoutManager(new LinearLayoutManager(this));
+        DbHelper dbHelperKey = DbHelper.getInstance(this);
+        mDb = dbHelperKey.getWritableDatabase();
+        cursor = getAllKeys();
+
+        dataAdapterKey = new DataAdapterKey(this, cursor, keyItemClickListener);
+        recyclerViewKey.setAdapter(dataAdapterKey);
+
+
+
+        new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
+
+            @Override
+            public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
+                //do nothing, we only care about swiping
+                return false;
+            }
+            @Override
+            public void onSwiped(RecyclerView.ViewHolder viewHolder, int swipeDir) {
+                long id = (long) viewHolder.itemView.getTag();
+                cursor = mDb.query(
+                        LockDataContract.TABLE_NAME_KEY_DATA,
+                        projection,
+                        LockDataContract._ID + "= ?",
+                        new String[] {String.valueOf(id)},
+                        null,
+                        null,
+                        LockDataContract.COLUMN_TIMESTAMP);
+                cursor.moveToPosition(0);
+                String doorId = cursor.getString(cursor.getColumnIndex(LockDataContract.COLUMN_DOOR_ID));
+                Intent serviceIntent = new Intent(MainActivity.this, NetworkService.class);
+                serviceIntent.putExtra("doorId", doorId);
+                startService(serviceIntent);
+                dataAdapterKey.swapCursor(getAllKeys());
+
+            }
+        }).attachToRecyclerView(recyclerViewKey);
+
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -43,104 +104,65 @@ public class MainActivity extends AppCompatActivity {
         qrScanner = sharedPreferences.getBoolean("qrScannerEnable", false);
         if(qrScanner){
             Intent intent = new Intent(MainActivity.this, QrReadActivity.class);
-            startActivityForResult(intent, 0);
+            startActivityForResult(intent, QR_SCAN);
         }
-
-
-
-
-
-
 
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 Intent intent = new Intent(MainActivity.this, AccessCodeActivity.class);
-                startActivityForResult(intent, 1);
+                startActivityForResult(intent, NEW_KEY);
             }
         });
 
 
-
-
-
     }
 
-
-    public String readFromClipboard() {
-        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-        if (clipboard.hasPrimaryClip()) {
-            android.content.ClipDescription description = clipboard.getPrimaryClipDescription();
-            android.content.ClipData data = clipboard.getPrimaryClip();
-            if (data != null && description != null
-                    && (description.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)
-                    || description.hasMimeType(ClipDescription.MIMETYPE_TEXT_HTML)))
-                return String.valueOf(data.getItemAt(0).getText());
-        }
-        return null;
-    }
-
-
-
-    private void createNewAccessCodeInDb(String accessCode){
-        byte[] accessBytes = Base64.decode(accessCode, Base64.DEFAULT);
-        if(accessBytes.length != 57) {
-            return;
-        }
-        byte[] secretWord = new byte[32];
-        byte[] userAes = new byte[32];
-        byte[] ipAddr = new byte[4];
-        byte[] door1Id = new byte[4];
-        byte[] door2Id = new byte[4];
-        byte[] userId = new byte[4];
-        byte userTag;
-        System.arraycopy(accessBytes, 0, userAes, 0, 16);
-        System.arraycopy(accessBytes, 0, userAes, 16, 16);
-        System.arraycopy(accessBytes, 0, userId, 0, 4);
-        System.arraycopy(accessBytes, 16, secretWord, 0, 32);
-        System.arraycopy(accessBytes, 48, ipAddr, 0, 4);
-        System.arraycopy(accessBytes, 52, door1Id, 0, 4);
-        System.arraycopy(accessBytes, 52, door2Id, 0, 4);
-        door2Id[3]++;
-        String door1IdStr = Base64.encodeToString(door1Id, Base64.DEFAULT);
-        String door2IdStr = Base64.encodeToString(door2Id, Base64.DEFAULT);
-        userTag = accessBytes[56];
-        String ipAddress = ipByteToStr(ipAddr);
-
-        ContentValues cv = new ContentValues();
-        cv.put(LockDataContract.COLUMN_AC_AES_KEY, userAes);
-        cv.put(LockDataContract.COLUMN_AC_SECRET_WORD, secretWord);
-        cv.put(LockDataContract.COLUMN_AC_IP_ADDRESS, ipAddress);
-        cv.put(LockDataContract.COLUMN_AC_DOOR1_ID_BYTE, door1Id);
-        cv.put(LockDataContract.COLUMN_AC_DOOR2_ID_BYTE, door2Id);
-        cv.put(LockDataContract.COLUMN_AC_DOOR1_ID_STR, door1IdStr);
-        cv.put(LockDataContract.COLUMN_AC_DOOR2_ID_STR, door2IdStr);
-        cv.put(LockDataContract.COLUMN_AC_USER_ID, userId);
-        cv.put(LockDataContract.COLUMN_AC_USER_TAG, userTag);
-
-        mDb.delete(LockDataContract.TABLE_NAME_ACCESS_CODES, LockDataContract.COLUMN_AC_DOOR1_ID_STR + "= ?", new String[]{door1IdStr});
-        mDb.insert(LockDataContract.TABLE_NAME_ACCESS_CODES, null, cv);
-    }
-
-    private String ipByteToStr(byte[] ip){
-        String output = new String();
-        for(int i = 0; i < ip.length; i++){
-            output = output + Integer.toString((int)ip[i] & 0xFF);
-            if(i!=3) output = output + ".";
-        }
-        return output;
-    }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if(resultCode == RESULT_OK && requestCode == 0){
-            Toast.makeText(getApplicationContext(),data.getStringExtra("result"),Toast.LENGTH_SHORT).show();
+        if(resultCode == RESULT_OK){
+            if(requestCode == QR_SCAN){
+                Intent serviceIntent = new Intent(MainActivity.this, NetworkService.class);
+                serviceIntent.putExtra("doorId", data.getStringExtra("result"));
+                startService(serviceIntent);
+                finish();
+
+            }else if(requestCode == NEW_KEY){
+                dataAdapterKey.swapCursor(getAllKeys());
+                recyclerViewKey.smoothScrollToPosition(dataAdapterKey.getItemCount());
+
+
+            }else if(requestCode == EDIT_KEY){
+                dataAdapterKey.swapCursor(getAllKeys());
+
+            }
+
 
 
         }
 
+
+
+
+
+
+
+
+    }
+
+    private Cursor getAllKeys() {
+        return mDb.query(
+                LockDataContract.TABLE_NAME_KEY_DATA,
+                null,
+                null,
+                null,
+                null,
+                null,
+                LockDataContract.COLUMN_TIMESTAMP
+        );
     }
 
     @Override
@@ -154,7 +176,7 @@ public class MainActivity extends AppCompatActivity {
         super.onOptionsItemSelected(item);
         if (item.getItemId() == R.id.nav_qr_scan) {
             Intent intent = new Intent(MainActivity.this, QrReadActivity.class);
-            startActivityForResult(intent, 0);
+            startActivityForResult(intent, QR_SCAN);
             return true;
         }else if (item.getItemId() == R.id.nav_settings){
             Intent intent = new Intent(MainActivity.this, SettingsActivity.class);

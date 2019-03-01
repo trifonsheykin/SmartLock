@@ -10,7 +10,7 @@ public class MessagesReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
 
-        Toast.makeText(context, "Error: " + intent.getStringExtra("status"),
+        Toast.makeText(context, intent.getStringExtra("status"),
                 Toast.LENGTH_SHORT).show();
 
 
