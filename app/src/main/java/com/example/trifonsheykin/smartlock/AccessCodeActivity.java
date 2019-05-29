@@ -44,6 +44,7 @@ public class AccessCodeActivity extends AppCompatActivity {
     byte[] door1StopTime = new byte[5];
     byte[] door2StartTime = new byte[5];
     byte[] door2StopTime = new byte[5];
+    private ClipboardManager clipboard;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -59,7 +60,7 @@ public class AccessCodeActivity extends AppCompatActivity {
 
         DbHelper dbHelperLock = DbHelper.getInstance(this);
         mDb = dbHelperLock.getWritableDatabase();
-
+        clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         bSave.setEnabled(false);
         bClear.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -70,7 +71,7 @@ public class AccessCodeActivity extends AppCompatActivity {
         bPaste.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+
                 if (clipboard.hasPrimaryClip()) {
                     ClipDescription description = clipboard.getPrimaryClipDescription();
                     ClipData data = clipboard.getPrimaryClip();
@@ -91,6 +92,8 @@ public class AccessCodeActivity extends AppCompatActivity {
             public void onClick(View v) {
                 saveKeyToDb();
                 setResult(RESULT_OK);
+                ClipData clipData = ClipData.newPlainText("", "");
+                clipboard.setPrimaryClip(clipData);
                 finish();
             }
         });

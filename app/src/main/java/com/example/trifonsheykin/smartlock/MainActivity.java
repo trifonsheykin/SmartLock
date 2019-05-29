@@ -58,7 +58,10 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         recyclerViewKey = findViewById(R.id.keyRecycler);
-        recyclerViewKey.setLayoutManager(new LinearLayoutManager(this));
+        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
+        linearLayoutManager.setReverseLayout(true);
+        linearLayoutManager.setStackFromEnd(true);
+        recyclerViewKey.setLayoutManager(linearLayoutManager);
         DbHelper dbHelperKey = DbHelper.getInstance(this);
         mDb = dbHelperKey.getWritableDatabase();
         cursor = getAllKeys();

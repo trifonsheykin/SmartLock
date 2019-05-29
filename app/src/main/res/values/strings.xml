@@ -4,7 +4,7 @@
     <string name="hint_string">Paste here access code</string>
     <string name="save_string">Save access code</string>
     <string name="open_door">Open door</string>
-    <string name="title_activity_main">Smart locks</string>
+    <string name="title_activity_main">SmartLocks</string>
 
     <string name="main_qr_code">QR scanner</string>
     <string name="main_settings">Settings</string>
