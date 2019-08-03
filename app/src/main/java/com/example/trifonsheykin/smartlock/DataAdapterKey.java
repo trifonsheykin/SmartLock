@@ -16,7 +16,7 @@ public class DataAdapterKey extends RecyclerView.Adapter<ViewHolderKey>  {
     private Cursor cursor;
     private View.OnClickListener clickListener;
 
-    private DataAdapterKey(Context context, Cursor cursor, View.OnClickListener clickListener) {
+    public DataAdapterKey(Context context, Cursor cursor, View.OnClickListener clickListener) {
         this.cursor = cursor;
         this.clickListener = clickListener;
         this.inflater = LayoutInflater.from(context);
@@ -40,7 +40,7 @@ public class DataAdapterKey extends RecyclerView.Adapter<ViewHolderKey>  {
         // Update the view holder with the information needed to display
         byte[] accessTimeStart = cursor.getBlob(cursor.getColumnIndex(LockDataContract.COLUMN_USER_START_DOOR_TIME));
         byte[] accessTimeStop = cursor.getBlob(cursor.getColumnIndex(LockDataContract.COLUMN_USER_STOP_DOOR_TIME));
-        String accessTime = new String("from: " + accessTimeByteToStr(accessTimeStart) + "\n     to: " + accessTimeByteToStr(accessTimeStop));
+        String accessTime = "from: " + accessTimeByteToStr(accessTimeStart) + "\n     to: " + accessTimeByteToStr(accessTimeStop);
         int keyStatus = cursor.getInt(cursor.getColumnIndex(LockDataContract.COLUMN_AC_ACTIVATED));
         String keyTitle = cursor.getString(cursor.getColumnIndex(LockDataContract.COLUMN_KEY_TITLE));
         String ssid = cursor.getString(cursor.getColumnIndex(LockDataContract.COLUMN_AP_SSID));
