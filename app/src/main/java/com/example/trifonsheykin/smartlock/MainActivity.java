@@ -16,9 +16,13 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.support.v7.widget.helper.ItemTouchHelper;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Toast;
+
+import static com.example.trifonsheykin.smartlock.NetworkService.DOOR_STAT;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -71,6 +75,7 @@ public class MainActivity extends AppCompatActivity {
 
 
 
+
         new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
 
             @Override
@@ -94,6 +99,7 @@ public class MainActivity extends AppCompatActivity {
                 Intent serviceIntent = new Intent(MainActivity.this, NetworkService.class);
                 serviceIntent.putExtra("doorId", doorId);
                 startService(serviceIntent);
+                System.out.println(serviceIntent);
                 dataAdapterKey.swapCursor(getAllKeys());
 
             }
@@ -131,7 +137,7 @@ public class MainActivity extends AppCompatActivity {
                 Intent serviceIntent = new Intent(MainActivity.this, NetworkService.class);
                 serviceIntent.putExtra("doorId", data.getStringExtra("result"));
                 startService(serviceIntent);
-                finish();
+                //finish();
 
             }else if(requestCode == NEW_KEY){
                 dataAdapterKey.swapCursor(getAllKeys());

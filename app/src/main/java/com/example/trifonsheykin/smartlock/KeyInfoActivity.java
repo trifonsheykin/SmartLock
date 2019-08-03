@@ -118,7 +118,7 @@ public class KeyInfoActivity extends AppCompatActivity {
         hour =  new String("" + (date[3] >> 4) + (date[3] & 0x0F));
         minute =  new String("" + (date[4] >> 4) + (date[4] & 0x0F));
 
-        return new String(hour + ":" + minute + " " + day + "." + month + "." + year);
+        return new String(hour + ":" + minute + " " + day + "/" + month + "/" + year);
     }
 
     @Override

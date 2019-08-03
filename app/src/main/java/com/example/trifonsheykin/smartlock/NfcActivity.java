@@ -30,6 +30,8 @@ import java.io.UnsupportedEncodingException;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
+import static com.example.trifonsheykin.smartlock.NetworkService.DOOR_STAT;
+
 public class NfcActivity extends AppCompatActivity {
     NfcAdapter nfcAdapter;
 
@@ -44,10 +46,7 @@ public class NfcActivity extends AppCompatActivity {
         } else {
             v.vibrate(100);
         }
-        WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
-        if(!wifiManager.isWifiEnabled()) {
-            Toast.makeText(this, "Turn ON your Wi-Fi adapter", Toast.LENGTH_SHORT).show();
-        }else{
+
             nfcAdapter = NfcAdapter.getDefaultAdapter(this);
             Intent intent = getIntent();
             String action = intent.getAction();
@@ -61,7 +60,7 @@ public class NfcActivity extends AppCompatActivity {
             Intent serviceIntent = new Intent(NfcActivity.this, NetworkService.class);
             serviceIntent.putExtra("doorId", doorId);
             startService(serviceIntent);
-        }
+
         finish();
     }
 

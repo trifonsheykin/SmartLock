@@ -10,8 +10,8 @@ public class MessagesReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
 
-        Toast.makeText(context, intent.getStringExtra("status"),
-                Toast.LENGTH_SHORT).show();
+        Toast.makeText(context, "\n\n"+intent.getStringExtra("status")+"\n\n",Toast.LENGTH_LONG).show();
+        //System.out.println(intent.getStringExtra("status"));
 
 
     }

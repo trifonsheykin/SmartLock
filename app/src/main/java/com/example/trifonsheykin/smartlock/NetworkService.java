@@ -1,5 +1,6 @@
 package com.example.trifonsheykin.smartlock;
 
+import android.app.AlertDialog;
 import android.app.IntentService;
 import android.content.ContentValues;
 import android.content.Context;
@@ -9,6 +10,9 @@ import android.database.sqlite.SQLiteDatabase;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.util.Base64;
+
+import android.content.BroadcastReceiver;
+import android.widget.Toast;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -40,7 +44,7 @@ public class NetworkService extends IntentService {
     private InputStream nis; //Network Input Stream
     private OutputStream nos; //Network Output Stream
 
-    public static final String DOOR_STAT = "com.smartlock.client.DOOR_OPENED";
+    public static final String DOOR_STAT = "com.smartlock.client.DOOR_OPENED";//com.smartlock.client
 
     byte XORcheck = 0;
     byte XORin = 0;
@@ -79,6 +83,8 @@ public class NetworkService extends IntentService {
         doorId = Base64.decode(doorIdString, Base64.DEFAULT);
         DbHelper dbHelperLock = DbHelper.getInstance(this);
         mDb = dbHelperLock.getWritableDatabase();
+        System.out.println("service started");
+
 
         cursorKeyData = mDb.query(
                 LockDataContract.TABLE_NAME_KEY_DATA,
@@ -90,7 +96,33 @@ public class NetworkService extends IntentService {
                 LockDataContract.COLUMN_TIMESTAMP
         );
 
+        WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+        if(!wifiManager.isWifiEnabled()) {
+            System.out.println("ERROR 01: turn ON your Wi-Fi adapter");
+            Intent broadcastIntent = new Intent(this, MessagesReceiver.class);//new Intent(DOOR_STAT);
+            broadcastIntent.putExtra("status", "ERROR 01: turn ON your Wi-Fi adapter");
+            sendBroadcast(broadcastIntent);
+            //Toast.makeText(this, "\n\nERROR 03: turn ON your Wi-Fi adapter\n\n", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        ssid = wifiInfo.getSSID();
+
+
+
         if(cursorKeyData.getCount() == 0){
+            System.out.println("cursor count error");
+            Intent broadcastIntent = new Intent(this, MessagesReceiver.class);//new Intent(DOOR_STAT);
+            broadcastIntent.putExtra("status", "ERROR 02: keys not found");
+            sendBroadcast(broadcastIntent);
+            return;
+        }
+
+        if(cursorKeyData.getCount() > 1){
+            System.out.println("too much AES keys");
+            Intent broadcastIntent = new Intent(this, MessagesReceiver.class);//new Intent(DOOR_STAT);
+            broadcastIntent.putExtra("status", "ERROR 03: you have conflicting keys. Delete duplicates");
+            sendBroadcast(broadcastIntent);
             return;
         }
 
@@ -105,38 +137,50 @@ public class NetworkService extends IntentService {
 
 
         if(!isConecctedToDevice()){
-            Intent broadcastIntent = new Intent(DOOR_STAT);
-            broadcastIntent.putExtra("status", "IP address not found");
+            System.out.println("isConecctedToDevice error");
+            Intent broadcastIntent = new Intent(this, MessagesReceiver.class);//new Intent(DOOR_STAT);
+
+            broadcastIntent.putExtra("status", "ERROR 04: device's IP address ("+ipAddress+") not found");
             sendBroadcast(broadcastIntent);
+            System.out.println(broadcastIntent);
             return;
         }
 
-        WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-        WifiInfo wifiInfo = wifiManager.getConnectionInfo();
-        ssid = wifiInfo.getSSID();
+
+
 
         byte[] buffer = new byte[100];
         int read = 0;
         int dialogStage = 0;
         try {
+            System.out.println("Try to connect");
             nsocket = new Socket(ipAddress, port);
             if (nsocket.isConnected()) {
+                System.out.println("Connection established");
                 nos = nsocket.getOutputStream();
                 nis = nsocket.getInputStream();
 
                 while(read != -1 && dialogStage < 3){
                     if(dialogStage == 0){
                         txData = makeChallengeRequestFor(userTag);
+                        System.out.println("Make challenge");
                     }else if(dialogStage == 1){
                         txData = encryptCommand(buffer);
+                        System.out.println("encryptCommand");
                     }else if(dialogStage == 2){
                         saveDataToDb(replyHandle(buffer), doorIdString);
+                        System.out.println("saveDataToDb");
                     }
                     if (txData == null || dialogStage == 2) break;
                     nos.write(txData);
                     nos.flush();
                     dialogStage++;
                     read = nis.read(buffer, 0, 100); //This is blocking
+                    if(read == 8){
+                        System.out.println("we'he got error");
+                        errorHandle(buffer);
+                        break;
+                    }
                 }
 
 
@@ -144,11 +188,79 @@ public class NetworkService extends IntentService {
             }
         } catch (IOException e) {
             e.printStackTrace();
-            Intent broadcastIntent = new Intent(DOOR_STAT);
-            broadcastIntent.putExtra("status", "Error: " + e.getMessage());
+            Intent broadcastIntent = new Intent(this, MessagesReceiver.class);//new Intent(DOOR_STAT);
+            broadcastIntent.putExtra("status", "ERROR 05: " + e.getMessage());
             sendBroadcast(broadcastIntent);
         }
 
+
+    }
+
+    private void errorHandle(byte[] buffer){
+
+        byte[] error = new byte[8];
+        System.arraycopy(buffer, 0, error, 0, 8);//userID[USER_ID_SIZE];//4
+        String errorCode = new String(error);
+        String out;
+        if(errorCode.equals("ERROR 10"))//SEQ_START_MSG_LENGTH_ERR = 10,//input message is no valid length
+            out = errorCode.concat(": SEQ_START_MSG_LENGTH_ERR\nmessage length is not valid");
+        else if(errorCode.equals("ERROR 11"))// SEQ_FLOW_MSG_LENGTH_ERR = 11,//input message is no valid length
+            out = errorCode.concat(": SEQ_FLOW_MSG_LENGTH_ERR\nmessage length is not valid");
+        else if(errorCode.equals("ERROR 12"))//NEW_MSG_LINK_ERR = 12, //device is working with another link at the moment
+            out = errorCode.concat(": NEW_MSG_LINK_ERR\nDevice is busy. Try to connect later");
+        else if(errorCode.equals("ERROR 13"))//PING_XOR_ERR = 13,
+            out = errorCode.concat(": PING_XOR_ERR\nCheck synchronisation");
+        else if(errorCode.equals("ERROR 14"))//PING_TEXT_ERR = 14,
+            out = errorCode.concat(": PING_TEXT_ERR\nNot ping command");
+        else if(errorCode.equals("ERROR 20"))// SYNC_XOR_CHECK_ERR = 20,
+            out = errorCode.concat(": SYNC_XOR_CHECK_ERR\nSync process error");
+        else if(errorCode.equals("ERROR 21"))// SYNC_XOR_CMD_ERR = 21,
+            out = errorCode.concat(": SYNC_XOR_CMD_ERR\nSync process error");
+        else if(errorCode.equals("ERROR 22"))//SYNC_FLOW_CMD_ERR = 22,
+            out = errorCode.concat(": SYNC_FLOW_CMD_ERR\nSync process error");
+        else if(errorCode.equals("ERROR 23"))//MSG_TWO_TYPE_ERR = 23,
+            out = errorCode.concat(": MSG_TWO_TYPE_ERR\nYour access code is not valid");
+        else if(errorCode.equals("ERROR 24"))//USER_TAG_ERR = 24,
+            out = errorCode.concat(": USER_TAG_ERR\nCheck your access code");
+        else if(errorCode.equals("ERROR 30"))//DOOR_OPEN_XOR_ERR = 30,
+            out = errorCode.concat(": DOOR_OPEN_XOR_ERR\nCheck your access code");
+        else if(errorCode.equals("ERROR 31"))//DOOR_OPEN_USER_ID_ERR = 31,
+            out = errorCode.concat(": DOOR_OPEN_USER_ID_ERR\nCheck your access code");
+        else if(errorCode.equals("ERROR 32"))//DOOR_OPEN_DOOR_ID_ERR = 32,
+            out = errorCode.concat(": DOOR_OPEN_DOOR_ID_ERR\nCheck the door ID");
+        else if(errorCode.equals("ERROR 33"))//DOOR_OPEN_ASSESS_TIME_ERR = 33,
+            out = errorCode.concat(": DOOR_OPEN_ASSESS_TIME_ERR\nCheck your access time");
+        else if(errorCode.equals("ERROR 40"))//PASS_ACTION_XOR_ERR = 40,
+            out = errorCode.concat(": PASS_ACTION_XOR_ERR\nCheck synchronisation");
+        else if(errorCode.equals("ERROR 41"))//PASS_ACTION_USER_ID_ERR = 41,
+            out = errorCode.concat(": PASS_ACTION_USER_ID_ERR\nCheck synchronisation");
+        else if(errorCode.equals("ERROR 42"))//PASS_ACTION_ADMIN_TAG_ERR = 42,
+            out = errorCode.concat(": PASS_ACTION_ADMIN_TAG_ERR\nCheck synchronisation");
+        else if(errorCode.equals("ERROR 43"))//PASS_ACTION_PLAY_PASS_ERR = 43,
+            out = errorCode.concat(": PASS_ACTION_PLAY_PASS_ERR\nCheck your pass code");
+        else if(errorCode.equals("ERROR 50"))//NEW_USER_ADM_KEY_ERR = 50,
+            out = errorCode.concat(": NEW_USER_ADM_KEY_ERR\nCheck your access code");
+        else if(errorCode.equals("ERROR 51"))//NEW_USER_XOR_CHECK_ERR = 51,
+            out = errorCode.concat(": NEW_USER_XOR_CHECK_ERR\nCheck your access code");
+        else if(errorCode.equals("ERROR 52"))//NEW_USER_ID_EMPTY_ERR = 52,
+            out = errorCode.concat(": NEW_USER_ID_EMPTY_ERR\nCheck your access code");
+        else if(errorCode.equals("ERROR 53"))//NEW_USER_ID_KEY_ERR = 53,
+            out = errorCode.concat(": NEW_USER_ID_KEY_ERR\nCheck your access code");
+        else if(errorCode.equals("ERROR 60"))//SECRET_CHECK_AES_ERR = 60,
+            out = errorCode.concat(": SECRET_CHECK_AES_ERR\nCheck your access code");
+        else if(errorCode.equals("ERROR 61"))//SECRET_ACCESS_TIME_ERR = 61,
+            out = errorCode.concat(": SECRET_ACCESS_TIME_ERR\nCheck your access time");
+        else if(errorCode.equals("ERROR 62"))//SECRET_ACCESS_RTC_ERR = 62,
+            out = errorCode.concat(": SECRET_ACCESS_RTC_ERR\nCheck your access time");
+        else if(errorCode.equals("ERROR 63"))//SECRET_USER_ID_ERR = 63
+            out = errorCode.concat(": SECRET_USER_ID_ERR\nCheck your access code");
+        else
+            out = errorCode.concat(": description not found");
+
+        System.out.println(out);
+        Intent broadcastIntent = new Intent(this, MessagesReceiver.class);//new Intent(DOOR_STAT);
+        broadcastIntent.putExtra("status", out);
+        sendBroadcast(broadcastIntent);
 
     }
 
@@ -202,13 +314,17 @@ public class NetworkService extends IntentService {
             }
 
             return txData;
+        }else{
+            Intent broadcastIntent = new Intent(this, MessagesReceiver.class);//new Intent(DOOR_STAT);
+            broadcastIntent.putExtra("status", "ERROR 06: XOR check error.\nYour access code is not valid");
+            sendBroadcast(broadcastIntent);
         }
         return null;
     }
 
     private void saveDataToDb(byte[] newAes, String doorIdStr){
         if(newAes == null){
-            Intent broadcastIntent = new Intent(DOOR_STAT);
+            Intent broadcastIntent = new Intent(this, MessagesReceiver.class);//new Intent(DOOR_STAT);
             broadcastIntent.putExtra("status", "No new AES key");
             sendBroadcast(broadcastIntent);
             return;
@@ -231,19 +347,25 @@ public class NetworkService extends IntentService {
     private byte[] replyHandle(byte[] buffer){
         byte[] temp = new byte[48];
         byte[] newAes = new byte[32];
+        System.out.println("replyHandle");
 
         System.arraycopy(buffer, 0, temp, 0, temp.length);
         decryptedData = decrypt(temp, initVectorRX, userAes);
         XORin = decryptedData[1];
         if (XORcheck == XORin) {
+            System.out.println("XORcheck == XORin");
             System.arraycopy(decryptedData, 2, newAes, 0, 32);
             byte[]reply = new byte[14];
             System.arraycopy(decryptedData, 34, reply, 0, reply.length);
-            Intent broadcastIntent = new Intent(DOOR_STAT);
+            Intent broadcastIntent = new Intent(this, MessagesReceiver.class);//new Intent(DOOR_STAT);
             broadcastIntent.putExtra("status", new String(reply));
             sendBroadcast(broadcastIntent);
             return newAes;
 
+        }else{
+            Intent broadcastIntent = new Intent(this, MessagesReceiver.class);//new Intent(DOOR_STAT);
+            broadcastIntent.putExtra("status", "ERROR 06: XOR check error.\nYour access code is not valid");
+            sendBroadcast(broadcastIntent);
         }
         return null;
     }

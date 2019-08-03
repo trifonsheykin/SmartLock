@@ -1,6 +1,7 @@
 package com.example.trifonsheykin.smartlock;
 
 import android.annotation.SuppressLint;
+import android.app.Application;
 import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Color;
@@ -11,11 +12,11 @@ import android.view.ViewGroup;
 
 public class DataAdapterKey extends RecyclerView.Adapter<ViewHolderKey>  {
 
-    LayoutInflater inflater;
+    private LayoutInflater inflater;
     private Cursor cursor;
     private View.OnClickListener clickListener;
 
-    public DataAdapterKey(Context context, Cursor cursor, View.OnClickListener clickListener) {
+    private DataAdapterKey(Context context, Cursor cursor, View.OnClickListener clickListener) {
         this.cursor = cursor;
         this.clickListener = clickListener;
         this.inflater = LayoutInflater.from(context);
@@ -51,6 +52,7 @@ public class DataAdapterKey extends RecyclerView.Adapter<ViewHolderKey>  {
             holder.keyTitleState.setBackgroundColor(Color.LTGRAY);
             holder.keyTitleState.setText(keyTitle + ": not activated");
         } else {
+            holder.keyTitleState.setBackgroundColor(Color.WHITE);
             holder.keyTitleState.setText(keyTitle + ": is active");
         }
         holder.keySsid.setText("Lock SSID: " + ssid);
@@ -66,7 +68,7 @@ public class DataAdapterKey extends RecyclerView.Adapter<ViewHolderKey>  {
         hour =  new String("" + (date[3] >> 4) + (date[3] & 0x0F));
         minute =  new String("" + (date[4] >> 4) + (date[4] & 0x0F));
 
-        return new String(hour + ":" + minute + " " + day + "." + month + "." + year);
+        return new String(hour + ":" + minute + " " + day + "/" + month + "/" + year);
     }
 
     @Override
