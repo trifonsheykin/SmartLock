@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.example.trifonsheykin.smartlock.KeyInfoActivity">
+    tools:context="com.smartlocks.trifonsheykin.smartlock.KeyInfoActivity">
 
     <TextView
         android:id="@+id/tv_key_info"

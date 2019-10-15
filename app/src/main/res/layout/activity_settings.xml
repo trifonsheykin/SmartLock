@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.example.trifonsheykin.smartlock.SettingsActivity">
+    tools:context="com.smartlocks.trifonsheykin.smartlock.SettingsActivity">
 
     <CheckBox
         android:id="@+id/cb_enable_qr"

@@ -1,4 +1,4 @@
-package com.example.trifonsheykin.smartlock;
+package com.smartlocks.trifonsheykin.smartlock;
 
 import android.content.ContentValues;
 import android.content.Intent;

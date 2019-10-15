@@ -1,4 +1,4 @@
-package com.example.trifonsheykin.smartlock;
+package com.smartlocks.trifonsheykin.smartlock;
 
 import org.junit.Test;
 

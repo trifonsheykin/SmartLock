@@ -1,4 +1,4 @@
-package com.example.trifonsheykin.smartlock;
+package com.smartlocks.trifonsheykin.smartlock;
 
 import android.support.v7.widget.RecyclerView;
 import android.view.View;

@@ -1,7 +1,6 @@
-package com.example.trifonsheykin.smartlock;
+package com.smartlocks.trifonsheykin.smartlock;
 
 import android.annotation.SuppressLint;
-import android.app.Application;
 import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Color;

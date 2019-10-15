@@ -1,6 +1,5 @@
-package com.example.trifonsheykin.smartlock;
+package com.smartlocks.trifonsheykin.smartlock;
 
-import android.app.AlertDialog;
 import android.app.IntentService;
 import android.content.ContentValues;
 import android.content.Context;
@@ -10,9 +9,6 @@ import android.database.sqlite.SQLiteDatabase;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.util.Base64;
-
-import android.content.BroadcastReceiver;
-import android.widget.Toast;
 
 import java.io.IOException;
 import java.io.InputStream;
