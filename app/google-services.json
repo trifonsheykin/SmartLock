@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "262083997306",
+    "firebase_url": "https://smartlockclient.firebaseio.com",
+    "project_id": "smartlockclient",
+    "storage_bucket": "smartlockclient.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:262083997306:android:d3d9c41832886e8ffc95c3",
+        "android_client_info": {
+          "package_name": "com.smartlock.client"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "262083997306-7lipta5v9erqcuji8b7eso697294b0hv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCnbbsdNwm2fjHE2mE6CsNPNZSnMVDwu0k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "262083997306-7lipta5v9erqcuji8b7eso697294b0hv.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
