@@ -17,6 +17,9 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
+import com.smartlocks.trifonsheykin.smartlock.analytics.Event;
+import com.smartlocks.trifonsheykin.smartlock.analytics.FirebaseHelper;
+
 
 public class MainActivity extends AppCompatActivity {
 
@@ -53,6 +56,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        FirebaseHelper.logEvent(this, Event.Screen.MAIN);
 
         recyclerViewKey = findViewById(R.id.keyRecycler);
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
@@ -115,6 +119,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
                 Intent intent = new Intent(MainActivity.this, AccessCodeActivity.class);
                 startActivityForResult(intent, NEW_KEY);
+                FirebaseHelper.logEvent(MainActivity.this, Event.Click.ADD_KEY);
             }
         });
 
