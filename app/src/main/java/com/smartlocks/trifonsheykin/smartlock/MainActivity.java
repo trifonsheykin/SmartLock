@@ -18,6 +18,8 @@ import android.view.MenuItem;
 import android.view.View;
 
 import com.smartlocks.trifonsheykin.smartlock.analytics.Event;
+import com.smartlocks.trifonsheykin.smartlock.analytics.EventParam;
+import com.smartlocks.trifonsheykin.smartlock.analytics.EventParamValue;
 import com.smartlocks.trifonsheykin.smartlock.analytics.FirebaseHelper;
 
 
@@ -56,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        FirebaseHelper.logEvent(this, Event.Screen.MAIN);
+        FirebaseHelper.logEvent(this, Event.Screen.MAIN, null);
 
         recyclerViewKey = findViewById(R.id.keyRecycler);
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
@@ -94,6 +96,7 @@ public class MainActivity extends AppCompatActivity {
                 cursor.moveToPosition(0);
                 String doorId = cursor.getString(cursor.getColumnIndex(LockDataContract.COLUMN_DOOR_ID));
                 Intent serviceIntent = new Intent(MainActivity.this, NetworkService.class);
+                serviceIntent.putExtra(EventParam.OPEN_DOOR_METHOD.getValue(), EventParamValue.MANUAL.getValue());
                 serviceIntent.putExtra("doorId", doorId);
                 startService(serviceIntent);
                 System.out.println(serviceIntent);
@@ -119,7 +122,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
                 Intent intent = new Intent(MainActivity.this, AccessCodeActivity.class);
                 startActivityForResult(intent, NEW_KEY);
-                FirebaseHelper.logEvent(MainActivity.this, Event.Click.ADD_KEY);
+                FirebaseHelper.logEvent(MainActivity.this, Event.Click.ADD_KEY, null);
             }
         });
 
@@ -133,6 +136,7 @@ public class MainActivity extends AppCompatActivity {
         if(resultCode == RESULT_OK){
             if(requestCode == QR_SCAN){
                 Intent serviceIntent = new Intent(MainActivity.this, NetworkService.class);
+                serviceIntent.putExtra(EventParam.OPEN_DOOR_METHOD.getValue(), EventParamValue.QR.getValue());
                 serviceIntent.putExtra("doorId", data.getStringExtra("result"));
                 startService(serviceIntent);
                 //finish();

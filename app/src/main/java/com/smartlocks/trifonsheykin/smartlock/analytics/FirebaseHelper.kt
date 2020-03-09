@@ -1,6 +1,7 @@
 package com.smartlocks.trifonsheykin.smartlock.analytics
 
 import android.content.Context
+import android.os.Bundle
 import com.google.firebase.analytics.FirebaseAnalytics
 
 class FirebaseHelper {
@@ -9,11 +10,20 @@ class FirebaseHelper {
         private var analytics: FirebaseAnalytics? = null
 
         @JvmStatic
-        fun logEvent(context: Context, event: Event) {
+        fun logEvent(
+            context: Context,
+            event: Event,
+            params: Map<EventParam, String>? = null
+        ) {
             if (analytics == null) {
                 analytics = FirebaseAnalytics.getInstance(context)
             }
-            analytics?.logEvent(event.value, null)
+            val bundle = Bundle().apply {
+                params?.forEach { (key, value) ->
+                    putString(key.value, value)
+                }
+            }
+            analytics?.logEvent(event.value, bundle)
         }
     }
 }

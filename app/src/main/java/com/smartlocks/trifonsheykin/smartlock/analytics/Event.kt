@@ -11,4 +11,8 @@ interface Event {
     enum class Click(override val value: String) : Event {
         ADD_KEY("click_add_key")
     }
+
+    enum class Common(override val value: String) : Event {
+        OPEN_DOOR("open_door")
+    }
 }

@@ -10,11 +10,16 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.util.Base64;
 
+import com.smartlocks.trifonsheykin.smartlock.analytics.Event;
+import com.smartlocks.trifonsheykin.smartlock.analytics.EventParam;
+import com.smartlocks.trifonsheykin.smartlock.analytics.FirebaseHelper;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.security.SecureRandom;
+import java.util.HashMap;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
@@ -74,8 +79,8 @@ public class NetworkService extends IntentService {
     Cursor cursorKeyData;
     @Override
     protected void onHandleIntent(Intent intent) {
-
-        String doorIdString = intent.getStringExtra("doorId");
+        final String doorOpenMethod = intent.getStringExtra(EventParam.OPEN_DOOR_METHOD.getValue());
+        final String doorIdString = intent.getStringExtra("doorId");
         doorId = Base64.decode(doorIdString, Base64.DEFAULT);
         DbHelper dbHelperLock = DbHelper.getInstance(this);
         mDb = dbHelperLock.getWritableDatabase();
@@ -189,7 +194,10 @@ public class NetworkService extends IntentService {
             sendBroadcast(broadcastIntent);
         }
 
-
+        FirebaseHelper.logEvent(this, Event.Common.OPEN_DOOR, new HashMap<EventParam, String>() {{
+            put(EventParam.OPEN_DOOR_METHOD, doorOpenMethod);
+            put(EventParam.DOOR_ID, doorIdString);
+        }});
     }
 
     private void errorHandle(byte[] buffer){

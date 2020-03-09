@@ -13,6 +13,9 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.widget.Toast;
 
+import com.smartlocks.trifonsheykin.smartlock.analytics.EventParam;
+import com.smartlocks.trifonsheykin.smartlock.analytics.EventParamValue;
+
 import java.io.UnsupportedEncodingException;
 
 public class NfcActivity extends AppCompatActivity {
@@ -41,6 +44,7 @@ public class NfcActivity extends AppCompatActivity {
             }
 
             Intent serviceIntent = new Intent(NfcActivity.this, NetworkService.class);
+            serviceIntent.putExtra(EventParam.OPEN_DOOR_METHOD.getValue(), EventParamValue.NFC.getValue());
             serviceIntent.putExtra("doorId", doorId);
             startService(serviceIntent);
 
