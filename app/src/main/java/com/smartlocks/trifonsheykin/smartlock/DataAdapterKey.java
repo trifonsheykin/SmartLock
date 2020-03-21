@@ -50,7 +50,16 @@ public class DataAdapterKey extends RecyclerView.Adapter<ViewHolderKey>  {
         if(keyStatus == 0) {
             holder.keyTitleState.setBackgroundColor(Color.LTGRAY);
             holder.keyTitleState.setText(keyTitle + ": not activated");
-        } else {
+        }else if (keyStatus == 2){
+            holder.keyTitleState.setBackgroundColor(Color.GREEN);
+            holder.keyTitleState.setText(keyTitle + ": main to be activated");
+        }else if (keyStatus == 3){
+            holder.keyTitleState.setBackgroundColor(Color.LTGRAY);
+            holder.keyTitleState.setText(keyTitle + ": waiting main");
+        }else if (keyStatus == 4){
+            holder.keyTitleState.setBackgroundColor(Color.WHITE);
+            holder.keyTitleState.setText(keyTitle + ": is active");
+        }else {
             holder.keyTitleState.setBackgroundColor(Color.WHITE);
             holder.keyTitleState.setText(keyTitle + ": is active");
         }

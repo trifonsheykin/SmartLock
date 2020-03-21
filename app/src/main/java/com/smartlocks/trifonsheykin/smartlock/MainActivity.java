@@ -17,13 +17,12 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
-
 public class MainActivity extends AppCompatActivity {
 
     private String accessCode;
     private SQLiteDatabase mDb;
     private SharedPreferences sharedPreferences;
-    private SharedPreferences.Editor spEditor;
+    //private SharedPreferences.Editor spEditor;
     private boolean qrScanner;
     RecyclerView recyclerViewKey;
     private Cursor cursor;
@@ -36,6 +35,11 @@ public class MainActivity extends AppCompatActivity {
             LockDataContract._ID,
             LockDataContract.COLUMN_DOOR_ID
     };
+
+
+
+    // use the shared preferences and editor as you normally would
+    //SharedPreferences.Editor editor = sharedPreferences.edit();
 
 
     private final View.OnClickListener keyItemClickListener =
@@ -65,6 +69,8 @@ public class MainActivity extends AppCompatActivity {
 
         dataAdapterKey = new DataAdapterKey(this, cursor, keyItemClickListener);
         recyclerViewKey.setAdapter(dataAdapterKey);
+
+
 
 
 

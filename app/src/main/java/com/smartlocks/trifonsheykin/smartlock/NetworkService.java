@@ -4,6 +4,7 @@ import android.app.IntentService;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.wifi.WifiInfo;
@@ -29,9 +30,13 @@ public class NetworkService extends IntentService {
     byte[] txData = new byte[80];
     byte[] decryptedData = new byte[80];
     byte[] doorId;
+    byte[] pass = new byte[8];
     private SQLiteDatabase mDb;
     private static final int NEW_USER_REG = 11;
     private static final int DOOR_OPEN_MSG = 5;
+    private static final int NEW_SUPER_REG = 12;
+    private static final int OPEN_SUPER    = 13;
+
     private String ipAddress;
     private String doorIdBro;
     private Socket nsocket; //Network Socket
@@ -142,6 +147,16 @@ public class NetworkService extends IntentService {
             return;
         }
 
+        if(active == 3){
+            System.out.println("superKeyIsNotActivatedForThisDevice error");
+            Intent broadcastIntent = new Intent(this, MessagesReceiver.class);//new Intent(DOOR_STAT);
+
+            broadcastIntent.putExtra("status", "ERROR 99: key for lock with IP: "+ipAddress+" is not activated");
+            sendBroadcast(broadcastIntent);
+            System.out.println(broadcastIntent);
+            return;
+        }
+
 
 
 
@@ -225,7 +240,7 @@ public class NetworkService extends IntentService {
         else if(errorCode.equals("ERROR 32"))//DOOR_OPEN_DOOR_ID_ERR = 32,
             out = errorCode.concat(": DOOR_OPEN_DOOR_ID_ERR\nCheck the door ID");
         else if(errorCode.equals("ERROR 33"))//DOOR_OPEN_ASSESS_TIME_ERR = 33,
-            out = errorCode.concat(": DOOR_OPEN_ASSESS_TIME_ERR\nCheck your access time");
+            out = errorCode.concat(": DOOR_OPEN_ACCESS_TIME_ERR\nCheck your access time");
         else if(errorCode.equals("ERROR 40"))//PASS_ACTION_XOR_ERR = 40,
             out = errorCode.concat(": PASS_ACTION_XOR_ERR\nCheck synchronisation");
         else if(errorCode.equals("ERROR 41"))//PASS_ACTION_USER_ID_ERR = 41,
@@ -280,16 +295,20 @@ public class NetworkService extends IntentService {
         System.arraycopy(nonce, 0, initVectorRX, 0, 16);//SAVE it to receive message
         return nonce;
     }
+
+
     private byte[] encryptCommand(byte[] buffer){
         System.arraycopy(buffer, 0, initVectorTX, 0, 16);
         byte[] temp = new byte[16];
+        byte[] txData;
+        byte[] plaintext;
         System.arraycopy(buffer, 0, temp, 0, temp.length);
         decryptedData = decrypt(temp, initVectorRX, userAes);
         System.arraycopy(decryptedData, 0, temp, 0, 16);
         XORin = decryptedData[0];
         if (XORcheck == XORin){
             if(active == 0){
-                byte[] plaintext = new byte[48];
+                plaintext = new byte[48];
                 plaintext[0] = NEW_USER_REG;//MESSAGE TYPE: NEW_USER_REG 11
                 plaintext[1] = XORcalc(temp);//XOR
                 System.arraycopy(userId, 0, plaintext, 2, 4);//userID[USER_ID_SIZE];//4
@@ -298,8 +317,9 @@ public class NetworkService extends IntentService {
                 XORcheck = XORcalc(plaintext);
                 txData = encrypt(plaintext, initVectorTX, userAes);
                 System.arraycopy(txData, 32, initVectorRX, 0, 16);//SAVE it to receive message
-            }else{
-                byte[] plaintext = new byte[16];
+
+            }else if(active == 1){
+                plaintext = new byte[16];
                 plaintext[0] = DOOR_OPEN_MSG;//MESSAGE TYPE: DOOR_OPEN_MSG = 5;
                 plaintext[1] = XORcalc(temp);//XOR
                 System.arraycopy(userId, 0, plaintext, 2, 4);//userID[USER_ID_SIZE];//4
@@ -307,6 +327,38 @@ public class NetworkService extends IntentService {
                 XORcheck = XORcalc(plaintext);
                 txData = encrypt(plaintext, initVectorTX, userAes);
                 System.arraycopy(txData, 0, initVectorRX, 0, 16);//SAVE it to receive message
+
+            }else if(active == 2){//NEW_SUPER_REG    12
+                plaintext = new byte[32];
+                plaintext[0] = NEW_SUPER_REG;
+                plaintext[1] = XORcalc(temp);//XOR
+                System.arraycopy(userId, 0, plaintext, 2, 4);//userID[USER_ID_SIZE];//4
+                System.arraycopy(secretWord, 0, plaintext, 6, 16);//userID[USER_ID_SIZE];//4
+                System.arraycopy(doorId, 0, plaintext, 22, 4);//userID[USER_ID_SIZE];//4
+                XORcheck = XORcalc(plaintext);
+                txData = encrypt(plaintext, initVectorTX, userAes);
+                System.arraycopy(txData, 16, initVectorRX, 0, 16);//SAVE it to receive message
+
+            }else if(active == 4){//OPEN_SUPER       13
+                plaintext = new byte[16];
+                byte[] pass = new byte[8];
+                System.arraycopy(secretWord, 0, pass, 0, 8);//
+                plaintext[0] = OPEN_SUPER;
+                plaintext[1] = XORcalc(temp);
+                byte[] superId = { (byte)0xBE, (byte)0xEF};
+                System.arraycopy(superId, 0, plaintext, 2, 2);//
+                System.arraycopy(doorId, 0, plaintext, 4, 4);//
+                System.arraycopy(pass,   0, plaintext, 8, 8);//
+                XORcheck = XORcalc(plaintext);
+                txData = encrypt(plaintext, initVectorTX, userAes);
+                System.arraycopy(txData, 0, initVectorRX, 0, 16);//SAVE it to receive message
+
+            }else{
+                txData = null;
+
+                Intent broadcastIntent = new Intent(this, MessagesReceiver.class);//new Intent(DOOR_STAT);
+                broadcastIntent.putExtra("status", "ERROR 98: Active flag error.\nWhile encrypt command");
+                sendBroadcast(broadcastIntent);
             }
 
             return txData;
@@ -326,23 +378,45 @@ public class NetworkService extends IntentService {
             return;
         }
 
-        ContentValues cv = new ContentValues();
-        cv.put(LockDataContract.COLUMN_AES_KEY, newAes);
-        cv.put(LockDataContract.COLUMN_AP_SSID, ssid);
-        if(active == 0) {//NEW KEW REGISTERED
-            cv.put(LockDataContract.COLUMN_AC_ACTIVATED, 1);
-            cv.put(LockDataContract.COLUMN_AC_SECRET_WORD, (byte[]) null);
+        if(active == 0 || active == 1){
+            ContentValues cv = new ContentValues();
+            cv.put(LockDataContract.COLUMN_AES_KEY, newAes);
+            cv.put(LockDataContract.COLUMN_AP_SSID, ssid);
+            if(active == 0) {//NEW KEY REGISTERED
+                cv.put(LockDataContract.COLUMN_AC_ACTIVATED, 1);
+                cv.put(LockDataContract.COLUMN_AC_SECRET_WORD, (byte[]) null);//
+
+            }
+            mDb.update(LockDataContract.TABLE_NAME_KEY_DATA, cv, LockDataContract.COLUMN_DOOR_ID + "= ?", new String[]{doorIdStr});
+            mDb.update(LockDataContract.TABLE_NAME_KEY_DATA, cv, LockDataContract.COLUMN_DOOR_ID + "= ?", new String[]{doorIdBro});
+
+        }else if(active == 2){
+            ContentValues cv = new ContentValues();
+            cv.put(LockDataContract.COLUMN_AES_KEY, newAes);
+            cv.put(LockDataContract.COLUMN_AP_SSID, ssid);
+            cv.put(LockDataContract.COLUMN_AC_ACTIVATED, 4);
+            cv.put(LockDataContract.COLUMN_AC_SECRET_WORD, pass);//
+            cv.put(LockDataContract.COLUMN_USER_TAG, 10);
+            mDb.update(LockDataContract.TABLE_NAME_KEY_DATA, cv, LockDataContract.COLUMN_DOOR_ID + "= ?", new String[]{doorIdStr});
+            mDb.update(LockDataContract.TABLE_NAME_KEY_DATA, cv, LockDataContract.COLUMN_DOOR_ID + "= ?", new String[]{doorIdBro});
+            mDb.update(LockDataContract.TABLE_NAME_KEY_DATA, cv, LockDataContract.COLUMN_AC_ACTIVATED + "= ?", new String[]{"3"});
+
+        }else if(active == 4){
+            ContentValues cv = new ContentValues();
+            cv.put(LockDataContract.COLUMN_AP_SSID, ssid);
+            mDb.update(LockDataContract.TABLE_NAME_KEY_DATA, cv, LockDataContract.COLUMN_DOOR_ID + "= ?", new String[]{doorIdStr});
+            mDb.update(LockDataContract.TABLE_NAME_KEY_DATA, cv, LockDataContract.COLUMN_DOOR_ID + "= ?", new String[]{doorIdBro});
+
+
+
         }
-        mDb.update(LockDataContract.TABLE_NAME_KEY_DATA, cv, LockDataContract.COLUMN_DOOR_ID + "= ?", new String[]{doorIdStr});
-        mDb.update(LockDataContract.TABLE_NAME_KEY_DATA, cv, LockDataContract.COLUMN_DOOR_ID + "= ?", new String[]{doorIdBro});
-
-
 
     }
 
     private byte[] replyHandle(byte[] buffer){
         byte[] temp = new byte[48];
         byte[] newAes = new byte[32];
+        byte[]reply;
         System.out.println("replyHandle");
 
         System.arraycopy(buffer, 0, temp, 0, temp.length);
@@ -350,14 +424,28 @@ public class NetworkService extends IntentService {
         XORin = decryptedData[1];
         if (XORcheck == XORin) {
             System.out.println("XORcheck == XORin");
-            System.arraycopy(decryptedData, 2, newAes, 0, 32);
-            byte[]reply = new byte[14];
-            System.arraycopy(decryptedData, 34, reply, 0, reply.length);
+            if(active == 0 || active == 1){
+                System.arraycopy(decryptedData, 2, newAes, 0, 32);
+                reply = new byte[14];
+                System.arraycopy(decryptedData, 34, reply, 0, reply.length);
+            }else if(active == 2){
+                System.arraycopy(decryptedData, 2, newAes, 0, 32);
+                reply = new byte[6];
+                System.arraycopy(decryptedData, 34, pass, 0, pass.length);
+                System.arraycopy(decryptedData, 42, reply, 0, reply.length);
+
+            }else if(active == 4){
+                System.arraycopy(decryptedData, 2, newAes, 0, 32);//this is dummy operation to save compatibility
+                reply = new byte[14];
+                System.arraycopy(decryptedData, 34, reply, 0, reply.length);
+
+            }else{
+                reply = "ERROR 97: Active flag error.\nWhile reply handle".getBytes();
+            }
             Intent broadcastIntent = new Intent(this, MessagesReceiver.class);//new Intent(DOOR_STAT);
             broadcastIntent.putExtra("status", new String(reply));
             sendBroadcast(broadcastIntent);
-            return newAes;
-
+            return newAes;//
         }else{
             Intent broadcastIntent = new Intent(this, MessagesReceiver.class);//new Intent(DOOR_STAT);
             broadcastIntent.putExtra("status", "ERROR 06: XOR check error.\nYour access code is not valid");
